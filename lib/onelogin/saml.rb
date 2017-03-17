@@ -33,6 +33,14 @@ module Onelogin
     "urn:oid:1.3.6.1.4.1.5923.1.2.1.5" => "eduOrgSuperiorURI",
     "urn:oid:1.3.6.1.4.1.5923.1.2.1.6" => "eduOrgWhitePagesURI",
   }
+
+  module Saml
+    class << self
+      def config
+        @config ||= { max_message_size: 1024 * 1024 }
+      end
+    end
+  end
 end
 
 require 'onelogin/saml/base_assertion'

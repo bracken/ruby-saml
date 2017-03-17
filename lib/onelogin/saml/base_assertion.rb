@@ -58,13 +58,23 @@ module Onelogin::Saml
     end
 
     def self.parse(raw_assertion, settings = nil)
+      raise "SAML assertion too large" if raw_assertion.bytesize > Onelogin::Saml.config[:max_message_size]
       assertion = new
       assertion.base64_assertion = raw_assertion
 
       decoded_xml = Base64.decode64(raw_assertion)
-      zlib = Zlib::Inflate.new(-Zlib::MAX_WBITS)
+      zlib = Zlib::Inflate.new
 
-      assertion.xml = zlib.inflate(decoded_xml)
+      xml = ''
+      # do it in 1K slices, so we can protect against bombs
+      (0..decoded_xml.bytesize / 1024).each do |i|
+        xml.concat(zlib.inflate(decoded_xml.byteslice(i * 1024, 1024)))
+        raise "SAML assertion too large" if xml.bytesize > Onelogin::Saml.config[:max_message_size]
+      end
+      xml.concat(zlib.finish)
+      raise "SAML assertion too large" if xml.bytesize > Onelogin::Saml.config[:max_message_size]
+
+      assertion.xml = xml
 
       assertion.process(settings) if settings
       assertion
