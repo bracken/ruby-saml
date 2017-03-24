@@ -63,7 +63,7 @@ module Onelogin::Saml
       assertion.base64_assertion = raw_assertion
 
       decoded_xml = Base64.decode64(raw_assertion)
-      zlib = Zlib::Inflate.new
+      zlib = Zlib::Inflate.new(-Zlib::MAX_WBITS)
 
       xml = ''
       # do it in 1K slices, so we can protect against bombs
