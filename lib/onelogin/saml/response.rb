@@ -6,7 +6,7 @@ module Onelogin::Saml
     attr_reader :name_id, :name_identifier_format, :name_qualifier, :sp_name_qualifier, :session_index, :saml_attributes
     attr_reader :status_code, :status_message
     attr_reader :in_response_to, :destination, :issuer
-    attr_reader :validation_error
+    attr_reader :validation_error, :used_key
 
     def initialize(response, settings=nil)
       @response = response
@@ -60,6 +60,7 @@ module Onelogin::Saml
       @decrypted_document ||= document.clone.tap do |doc|
         doc.extend(XMLSecurity::SignedDocument)
         doc.decrypt!(settings)
+        @used_key = doc.used_key
       end
     end
 

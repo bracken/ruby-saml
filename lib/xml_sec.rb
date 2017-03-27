@@ -304,7 +304,7 @@ module XMLSecurity
   end
 
   module SignedDocument
-    attr_reader :validation_error
+    attr_reader :validation_error, :used_key
 
     def self.format_cert(cert)
       # re-encode the certificate in the proper format
@@ -435,7 +435,10 @@ module XMLSecurity
     def decrypt_node(settings, xmlstr)
       settings.all_private_keys.each do |key|
         result = xmlsec_decrypt(xmlstr, key)
-        return result if result
+        if result
+          @used_key = key
+          return result
+        end
       end
       nil
     end

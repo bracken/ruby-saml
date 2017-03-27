@@ -15,6 +15,7 @@ describe Onelogin::Saml::Response do
       @response = Onelogin::Saml::Response.new(@xmlb64, @settings)
       @response.should be_is_valid
 
+      @response.used_key.should == fixture_path("test1-key.pem")
       @response.name_id.should == "zach@zwily.com"
       @response.name_qualifier.should == "http://saml.example.com:8080/opensso"
       @response.session_index.should == "s2c57ee92b5ca08e93d751987d591c58acc68d2501"
