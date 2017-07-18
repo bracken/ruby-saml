@@ -13,7 +13,7 @@ Gem::Specification.new do |s|
   s.test_files = s.files.grep(%r{^(test|spec|features)/})
   s.require_paths = ["lib"]
 
-  s.add_dependency('nokogiri', '>= 1.6', '< 1.8')
+  s.add_dependency('nokogiri', '>= 1.6', '< 1.9')
   s.add_dependency('ffi')
 
   s.add_development_dependency 'rake', '~> 11.0'
