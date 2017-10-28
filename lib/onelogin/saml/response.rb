@@ -8,7 +8,7 @@ module Onelogin::Saml
     attr_reader :in_response_to, :destination, :issuer
     attr_reader :validation_error, :used_key
 
-    def initialize(response, settings=nil)
+    def initialize(response, settings=nil, as_of: Time.now)
       @response = response
 
       begin
@@ -25,10 +25,10 @@ module Onelogin::Saml
       @issuer ||= document.at_xpath("/samlp:Response/saml:Assertion/saml:Issuer", Onelogin::NAMESPACES).content.strip rescue nil
       @status_code = document.at_xpath("/samlp:Response/samlp:Status/samlp:StatusCode", Onelogin::NAMESPACES)["Value"] rescue nil
 
-      process(settings) if settings
+      process(settings, as_of: as_of) if settings
     end
 
-    def process(settings)
+    def process(settings, as_of: Time.now)
       @settings = settings
       @logger = settings.logger
       return unless @response
@@ -42,11 +42,26 @@ module Onelogin::Saml
       @name_qualifier = trusted_find_first("saml:Assertion/saml:Subject/saml:NameID")["NameQualifier"] rescue nil
       @sp_name_qualifier = trusted_find_first("saml:Assertion/saml:Subject/saml:NameID")["SPNameQualifier"] rescue nil
       @session_index  = trusted_find_first("saml:Assertion/saml:AuthnStatement")["SessionIndex"] rescue nil
+      @issue_instant  = trusted_find_first("saml:Assertion")["IssueInstant"] rescue nil
 
       @saml_attributes = {}
       trusted_find("saml:Attribute").each do |attr|
         attrname = attr['FriendlyName'] || Onelogin::ATTRIBUTES[attr['Name']] || attr['Name']
         @saml_attributes[attrname] = attr.content.strip rescue nil
+      end
+
+      if @is_valid
+        @issue_instant = Time.parse(@issue_instant) if @issue_instant
+        if !@issue_instant
+          @is_valid = false
+          @validation_error = "No timestamp in message"
+        elsif @issue_instant + 5 * 60 < as_of
+          @is_valid = false
+          @validation_error = "Assertion expired"
+        elsif @issue_instant - 5 * 60 > as_of
+          @is_valid = false
+          @validation_error = "Assertion not yet valid"
+        end
       end
     end
 
@@ -79,7 +94,10 @@ module Onelogin::Saml
     end
 
     def is_valid?
-      @is_valid ||= validate
+      if !instance_variable_defined?(:@is_valid)
+        @is_valid = validate
+      end
+      @is_valid
     end
 
     def validate
