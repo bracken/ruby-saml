@@ -163,6 +163,19 @@ describe Onelogin::Saml::Response do
     @response.fingerprint_from_idp.should == 'afe71c28ef740bc87425be13a2263d37971da1f9'
   end
 
+  # see CVE-2017-11428
+  it "returns the full content of the NameID, even if a comment-insertion attack allows it to still validate the signature" do
+    # this file is a copy of test6-response.xml, with a comment inserted into the NameID
+    @xmlb64 = Base64.encode64(File.read(fixture_path("test7-response.xml")))
+    @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'afe71c28ef740bc87425be13a2263d37971da1f9')
+    @response = Onelogin::Saml::Response.new(@xmlb64, @settings, as_of: Time.parse("2014-09-16T22:15:53Z"))
+    # the signature is still valid
+    @response.should be_is_valid
+    @response.status_code.should == "urn:oasis:names:tc:SAML:2.0:status:Success"
+    # the comment is ignored, but doesn't truncate the nameid
+    @response.name_id.should == 'testuser@example.com'
+  end
+
   it "should map OIDs to known attributes" do
     @xmlb64 = Base64.encode64(File.read(fixture_path("test3-response.xml")))
     @settings = Onelogin::Saml::Settings.new(:idp_cert_fingerprint => 'afe71c28ef740bc87425be13a2263d37971da1f9')
